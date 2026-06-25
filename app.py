@@ -845,7 +845,7 @@ def section_social(sm, audit, benchmark):
     # Identify best-performing topic
     by_topic = sm.get("by_topic", {})
     best_topic = max(by_topic.items(), key=lambda x: x[1]["mean_gain"])[0] if by_topic else "digital literacy"
-    worst_topic = max(by_topic.items(), key=lambda x: x[1]["pct_below_85"])[0] if by_topic else None
+    worst_topic = min(by_topic.items(), key=lambda x: x[1]["pct_reaching_85"])[0] if by_topic else None
 
     n       = o["n_people"]
     gain    = o["mean_gain"]
