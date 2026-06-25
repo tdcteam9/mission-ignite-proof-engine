@@ -589,10 +589,9 @@ def section_overview(sm, audit, benchmark, prev_sm=None, prev_audit=None):
 
     if prev_sm:
         st.info(
-            f"↑↓ Deltas shown vs previous period "
+            f"Deltas shown vs previous period "
             f"({prev_audit['distinct_people']:,} people, "
-            f"+{prev_sm['overall']['mean_gain']} pts avg gain)",
-            icon="📊"
+            f"+{prev_sm['overall']['mean_gain']} pts avg gain)"
         )
 
     col_a, col_b = st.columns(2)
@@ -699,51 +698,50 @@ def section_reports(pairs, sm, audit, wp, cl, benchmark, period):
     # ── PDF report buttons ────────────────────────────────────────────────────
     if not HAVE_PDF:
         st.warning(
-            "⚠️ PDF generation requires **weasyprint**. "
+            "PDF generation requires **weasyprint**. "
             "Add `weasyprint` to `requirements.txt` and "
             "`libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b libcairo2` to `packages.txt`, "
-            "then redeploy.",
-            icon="⚠️"
+            "then redeploy."
         )
 
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("**📄 Funder Report**")
+        st.markdown("**Funder Report**")
         st.caption(f"One-pager with headline stats, topic results, and improvement focus. Benchmark: {benchmark}%.")
         if HAVE_PDF:
             pdf = render_pdf(build_funder_pdf_html(sm, audit, wp, benchmark, period))
             if pdf:
-                st.download_button("⬇️ Download Funder Report PDF", data=pdf,
+                st.download_button("Download Funder Report PDF", data=pdf,
                                    file_name="Mission_Ignite_Funder_Report.pdf",
                                    mime="application/pdf", type="primary", use_container_width=True)
 
     with col2:
-        st.markdown("**📋 Executive Summary**")
+        st.markdown("**Executive Summary**")
         st.caption("Full internal detail: all topics, center leaderboard, gain distribution.")
         if HAVE_PDF:
             pdf2 = render_pdf(build_exec_pdf_html(sm, audit, wp, cl, benchmark, period))
             if pdf2:
-                st.download_button("⬇️ Download Executive Summary PDF", data=pdf2,
+                st.download_button("Download Executive Summary PDF", data=pdf2,
                                    file_name="Mission_Ignite_Executive_Summary.pdf",
                                    mime="application/pdf", type="primary", use_container_width=True)
 
     st.divider()
 
     # ── Per-site ZIP ──────────────────────────────────────────────────────────
-    st.markdown("### 📦 All Site Reports (ZIP)")
+    st.markdown("### All Site Reports (ZIP)")
     eligible_sites = [s for s, v in sm.get("by_site", {}).items() if v["n_people"] >= MIN_N_SITE_PDF]
     st.caption(
         f"{len(eligible_sites)} sites qualify (≥{MIN_N_SITE_PDF} learners). "
         "Each PDF shows that site's stats with a comparison to the network average."
     )
     if HAVE_PDF and eligible_sites:
-        if st.button("⚙️ Generate all site PDFs", use_container_width=True):
+        if st.button("Generate all site PDFs", use_container_width=True):
             with st.spinner(f"Generating {len(eligible_sites)} site reports…"):
                 zip_bytes, count = build_site_zip(pairs, sm, benchmark, period)
             if zip_bytes and count:
                 st.download_button(
-                    f"⬇️ Download {count} site reports (ZIP)",
+                    f"Download {count} site reports (ZIP)",
                     data=zip_bytes,
                     file_name="Mission_Ignite_Site_Reports.zip",
                     mime="application/zip",
@@ -804,16 +802,16 @@ def section_reports(pairs, sm, audit, wp, cl, benchmark, period):
     ca, cb, cc = st.columns(3)
     try:
         dash = build_dashboard(summary_compat, audit_compat, weak_compat, centers_compat)
-        ca.download_button("⬇️ Dashboard HTML", dash.encode(),
+        ca.download_button("Dashboard HTML", dash.encode(),
                            "dashboard.html", "text/html", use_container_width=True)
     except Exception as e:
         ca.warning(f"Dashboard error: {e}")
 
     buf = io.BytesIO()
     pairs.to_csv(buf, index=False)
-    cb.download_button("⬇️ Matched Pairs CSV", buf.getvalue(),
+    cb.download_button("Matched Pairs CSV", buf.getvalue(),
                        "matched_pairs.csv", "text/csv", use_container_width=True)
-    cc.download_button("⬇️ Audit JSON", json.dumps(audit_compat, indent=2).encode(),
+    cc.download_button("Audit JSON", json.dumps(audit_compat, indent=2).encode(),
                        "audit.json", "application/json", use_container_width=True)
 
 
@@ -822,11 +820,10 @@ def section_reports(pairs, sm, audit, wp, cl, benchmark, period):
 def main():
     st.set_page_config(
         page_title="Mission: Ignite — Proof Engine",
-        page_icon="🎯",
         layout="wide",
     )
 
-    st.title("🎯 Mission: Ignite — Proof of Learning")
+    st.title("Mission: Ignite — Proof of Learning")
     st.caption(
         "Drop a Northstar Digital Literacy Assessment export to generate "
         "defensible, headcount-backed proof-of-learning numbers."
@@ -848,7 +845,7 @@ def main():
         has_filters = False
 
         if csv_file:
-            with st.expander("⚙️ Filters & settings", expanded=False):
+            with st.expander("Filters & settings", expanded=False):
                 benchmark = st.slider(
                     "Proficiency benchmark (%)", 50, 95, DEFAULT_BENCHMARK, step=5,
                     help="The score a learner must reach to 'pass'. Northstar default is 85%."
@@ -874,7 +871,7 @@ def main():
 
     # ── no file ───────────────────────────────────────────────────────────────
     if not csv_file:
-        st.info("👈 Upload a Northstar CSV export to get started.", icon="📂")
+        st.info("Upload a Northstar CSV export in the sidebar to get started.")
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("People matched", "—")
         c2.metric("Mean gain", "—")
@@ -902,7 +899,7 @@ def main():
         min_date = valid_dates.dt.date.min()
         max_date = valid_dates.dt.date.max()
         with st.sidebar:
-            with st.expander("⚙️ Filters & settings", expanded=False):
+            with st.expander("Filters & settings", expanded=False):
                 pass  # already rendered benchmark above; date goes in same expander via session state trick
 
         # Render date filter directly in sidebar (outside the expander to avoid duplicate key)
@@ -948,11 +945,11 @@ def main():
 
     # ── tabs ──────────────────────────────────────────────────────────────────
     tabs = st.tabs([
-        "📊 Overview",
-        "📚 By Topic",
-        "🏫 Centers & Sites",
-        "⚠️ Improvement Focus",
-        "📥 Reports",
+        "Overview",
+        "By Topic",
+        "Centers & Sites",
+        "Improvement Focus",
+        "Reports",
     ])
     with tabs[0]: section_overview(sm, audit, benchmark, prev_sm, prev_audit)
     with tabs[1]: section_topics(sm, benchmark)
