@@ -1,0 +1,22 @@
+# Raw data — never commit learner data to a public repo
+Mission_Ignite_Data.csv
+*.csv
+
+# Generated outputs (app produces these on demand)
+outputs/
+centers.json
+*_DRAFT.md
+*.pdf
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Editor / internal
+.streamlit/
+.claude/
+PLAN.md
+*.html

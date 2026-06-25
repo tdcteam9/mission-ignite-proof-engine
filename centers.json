@@ -1,0 +1,385 @@
+{
+  "center_leaderboard": {
+    "min_n_per_center": 10,
+    "by_absolute_outcome": [
+      {
+        "center": "GFJ Library",
+        "learners": 11,
+        "mean_gain": 15.3,
+        "mean_pretest": 65.5,
+        "mean_posttest": 80.8,
+        "pct_reaching_85": 90.9,
+        "n_trainer_eligible": 10
+      },
+      {
+        "center": "Lockport Public Library",
+        "learners": 10,
+        "mean_gain": 12.4,
+        "mean_pretest": 76.7,
+        "mean_posttest": 89.1,
+        "pct_reaching_85": 90.0,
+        "n_trainer_eligible": 9
+      },
+      {
+        "center": "Salvation Army",
+        "learners": 26,
+        "mean_gain": 19.5,
+        "mean_pretest": 60.8,
+        "mean_posttest": 80.3,
+        "pct_reaching_85": 88.5,
+        "n_trainer_eligible": 23
+      },
+      {
+        "center": "Friends INC.",
+        "learners": 12,
+        "mean_gain": 15.1,
+        "mean_pretest": 68.0,
+        "mean_posttest": 83.1,
+        "pct_reaching_85": 83.3,
+        "n_trainer_eligible": 10
+      },
+      {
+        "center": "West Seneca Public Library",
+        "learners": 25,
+        "mean_gain": 29.6,
+        "mean_pretest": 54.9,
+        "mean_posttest": 84.5,
+        "pct_reaching_85": 80.0,
+        "n_trainer_eligible": 20
+      },
+      {
+        "center": "Orleans CCCE",
+        "learners": 69,
+        "mean_gain": 11.6,
+        "mean_pretest": 73.8,
+        "mean_posttest": 85.4,
+        "pct_reaching_85": 79.7,
+        "n_trainer_eligible": 55
+      },
+      {
+        "center": "International Institute of Buffalo",
+        "learners": 18,
+        "mean_gain": 14.8,
+        "mean_pretest": 64.3,
+        "mean_posttest": 79.1,
+        "pct_reaching_85": 77.8,
+        "n_trainer_eligible": 14
+      },
+      {
+        "center": "Elaine M. Panty",
+        "learners": 13,
+        "mean_gain": 16.7,
+        "mean_pretest": 66.1,
+        "mean_posttest": 82.8,
+        "pct_reaching_85": 76.9,
+        "n_trainer_eligible": 10
+      },
+      {
+        "center": "Buffalo EOC",
+        "learners": 29,
+        "mean_gain": 19.5,
+        "mean_pretest": 61.5,
+        "mean_posttest": 80.9,
+        "pct_reaching_85": 75.9,
+        "n_trainer_eligible": 22
+      },
+      {
+        "center": "716 Ministries",
+        "learners": 25,
+        "mean_gain": 17.0,
+        "mean_pretest": 67.5,
+        "mean_posttest": 84.6,
+        "pct_reaching_85": 72.0,
+        "n_trainer_eligible": 18
+      },
+      {
+        "center": "Lackawanna Public Library",
+        "learners": 12,
+        "mean_gain": 17.3,
+        "mean_pretest": 57.7,
+        "mean_posttest": 75.0,
+        "pct_reaching_85": 66.7,
+        "n_trainer_eligible": 8
+      },
+      {
+        "center": "Sheridan Parkside Life Center",
+        "learners": 17,
+        "mean_gain": 11.9,
+        "mean_pretest": 61.3,
+        "mean_posttest": 73.2,
+        "pct_reaching_85": 64.7,
+        "n_trainer_eligible": 11
+      },
+      {
+        "center": "South Park HS",
+        "learners": 39,
+        "mean_gain": 12.4,
+        "mean_pretest": 66.1,
+        "mean_posttest": 78.5,
+        "pct_reaching_85": 64.1,
+        "n_trainer_eligible": 25
+      },
+      {
+        "center": "Journey's End Refugee Services",
+        "learners": 11,
+        "mean_gain": 23.8,
+        "mean_pretest": 49.5,
+        "mean_posttest": 73.4,
+        "pct_reaching_85": 45.5,
+        "n_trainer_eligible": 5
+      },
+      {
+        "center": "Frank E Merriweather Jr Library",
+        "learners": 11,
+        "mean_gain": 7.8,
+        "mean_pretest": 57.0,
+        "mean_posttest": 64.8,
+        "pct_reaching_85": 27.3,
+        "n_trainer_eligible": 3
+      },
+      {
+        "center": "First Shiloh",
+        "learners": 13,
+        "mean_gain": 4.4,
+        "mean_pretest": 67.4,
+        "mean_posttest": 71.8,
+        "pct_reaching_85": 23.1,
+        "n_trainer_eligible": 3
+      },
+      {
+        "center": "Bennett HS",
+        "learners": 57,
+        "mean_gain": 13.8,
+        "mean_pretest": 58.0,
+        "mean_posttest": 71.8,
+        "pct_reaching_85": 22.8,
+        "n_trainer_eligible": 13
+      }
+    ],
+    "by_value_added": [
+      {
+        "center": "West Seneca Public Library",
+        "learners": 25,
+        "mean_gain": 29.6,
+        "mean_pretest": 54.9,
+        "mean_posttest": 84.5,
+        "pct_reaching_85": 80.0,
+        "n_trainer_eligible": 20
+      },
+      {
+        "center": "Journey's End Refugee Services",
+        "learners": 11,
+        "mean_gain": 23.8,
+        "mean_pretest": 49.5,
+        "mean_posttest": 73.4,
+        "pct_reaching_85": 45.5,
+        "n_trainer_eligible": 5
+      },
+      {
+        "center": "Buffalo EOC",
+        "learners": 29,
+        "mean_gain": 19.5,
+        "mean_pretest": 61.5,
+        "mean_posttest": 80.9,
+        "pct_reaching_85": 75.9,
+        "n_trainer_eligible": 22
+      },
+      {
+        "center": "Salvation Army",
+        "learners": 26,
+        "mean_gain": 19.5,
+        "mean_pretest": 60.8,
+        "mean_posttest": 80.3,
+        "pct_reaching_85": 88.5,
+        "n_trainer_eligible": 23
+      },
+      {
+        "center": "Lackawanna Public Library",
+        "learners": 12,
+        "mean_gain": 17.3,
+        "mean_pretest": 57.7,
+        "mean_posttest": 75.0,
+        "pct_reaching_85": 66.7,
+        "n_trainer_eligible": 8
+      },
+      {
+        "center": "716 Ministries",
+        "learners": 25,
+        "mean_gain": 17.0,
+        "mean_pretest": 67.5,
+        "mean_posttest": 84.6,
+        "pct_reaching_85": 72.0,
+        "n_trainer_eligible": 18
+      },
+      {
+        "center": "Elaine M. Panty",
+        "learners": 13,
+        "mean_gain": 16.7,
+        "mean_pretest": 66.1,
+        "mean_posttest": 82.8,
+        "pct_reaching_85": 76.9,
+        "n_trainer_eligible": 10
+      },
+      {
+        "center": "GFJ Library",
+        "learners": 11,
+        "mean_gain": 15.3,
+        "mean_pretest": 65.5,
+        "mean_posttest": 80.8,
+        "pct_reaching_85": 90.9,
+        "n_trainer_eligible": 10
+      },
+      {
+        "center": "Friends INC.",
+        "learners": 12,
+        "mean_gain": 15.1,
+        "mean_pretest": 68.0,
+        "mean_posttest": 83.1,
+        "pct_reaching_85": 83.3,
+        "n_trainer_eligible": 10
+      },
+      {
+        "center": "International Institute of Buffalo",
+        "learners": 18,
+        "mean_gain": 14.8,
+        "mean_pretest": 64.3,
+        "mean_posttest": 79.1,
+        "pct_reaching_85": 77.8,
+        "n_trainer_eligible": 14
+      },
+      {
+        "center": "Bennett HS",
+        "learners": 57,
+        "mean_gain": 13.8,
+        "mean_pretest": 58.0,
+        "mean_posttest": 71.8,
+        "pct_reaching_85": 22.8,
+        "n_trainer_eligible": 13
+      },
+      {
+        "center": "Lockport Public Library",
+        "learners": 10,
+        "mean_gain": 12.4,
+        "mean_pretest": 76.7,
+        "mean_posttest": 89.1,
+        "pct_reaching_85": 90.0,
+        "n_trainer_eligible": 9
+      },
+      {
+        "center": "South Park HS",
+        "learners": 39,
+        "mean_gain": 12.4,
+        "mean_pretest": 66.1,
+        "mean_posttest": 78.5,
+        "pct_reaching_85": 64.1,
+        "n_trainer_eligible": 25
+      },
+      {
+        "center": "Sheridan Parkside Life Center",
+        "learners": 17,
+        "mean_gain": 11.9,
+        "mean_pretest": 61.3,
+        "mean_posttest": 73.2,
+        "pct_reaching_85": 64.7,
+        "n_trainer_eligible": 11
+      },
+      {
+        "center": "Orleans CCCE",
+        "learners": 69,
+        "mean_gain": 11.6,
+        "mean_pretest": 73.8,
+        "mean_posttest": 85.4,
+        "pct_reaching_85": 79.7,
+        "n_trainer_eligible": 55
+      },
+      {
+        "center": "Frank E Merriweather Jr Library",
+        "learners": 11,
+        "mean_gain": 7.8,
+        "mean_pretest": 57.0,
+        "mean_posttest": 64.8,
+        "pct_reaching_85": 27.3,
+        "n_trainer_eligible": 3
+      },
+      {
+        "center": "First Shiloh",
+        "learners": 13,
+        "mean_gain": 4.4,
+        "mean_pretest": 67.4,
+        "mean_posttest": 71.8,
+        "pct_reaching_85": 23.1,
+        "n_trainer_eligible": 3
+      }
+    ],
+    "caveat": "Two lenses on purpose: a center serving learners who start lower can show the largest gain yet a lower pass rate. Read both before judging a center."
+  },
+  "trainer_pipeline": {
+    "available": true,
+    "note": "Confirm with the team that these tags identify trainer applicants.",
+    "total_applicant_records": 288,
+    "distinct_applicants": 55,
+    "by_topic_qualification": [
+      {
+        "topic": "Using Email",
+        "applicants": 24,
+        "qualified_85": 20,
+        "pct_qualified": 83.3
+      },
+      {
+        "topic": "Basic Computer Skills",
+        "applicants": 22,
+        "qualified_85": 18,
+        "pct_qualified": 81.8
+      },
+      {
+        "topic": "Internet Basics",
+        "applicants": 22,
+        "qualified_85": 18,
+        "pct_qualified": 81.8
+      },
+      {
+        "topic": "Microsoft Word",
+        "applicants": 41,
+        "qualified_85": 31,
+        "pct_qualified": 75.6
+      },
+      {
+        "topic": "Google Docs",
+        "applicants": 34,
+        "qualified_85": 24,
+        "pct_qualified": 70.6
+      },
+      {
+        "topic": "Microsoft Excel",
+        "applicants": 38,
+        "qualified_85": 24,
+        "pct_qualified": 63.2
+      },
+      {
+        "topic": "Your Digital Footprint",
+        "applicants": 8,
+        "qualified_85": 5,
+        "pct_qualified": 62.5
+      },
+      {
+        "topic": "Microsoft PowerPoint",
+        "applicants": 35,
+        "qualified_85": 21,
+        "pct_qualified": 60.0
+      },
+      {
+        "topic": "Windows",
+        "applicants": 20,
+        "qualified_85": 12,
+        "pct_qualified": 60.0
+      },
+      {
+        "topic": "Mac OS",
+        "applicants": 5,
+        "qualified_85": 1,
+        "pct_qualified": 20.0
+      }
+    ],
+    "min_n_per_topic": 5
+  }
+}
