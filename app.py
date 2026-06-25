@@ -825,6 +825,107 @@ def section_reports(pairs, sm, audit, wp, cl, benchmark, period):
                        "audit.json", "application/json", use_container_width=True)
 
 
+# ─── social media generator ───────────────────────────────────────────────────
+
+def section_social(sm, audit, benchmark):
+    st.markdown("### Social Media Post Generator")
+    st.caption(
+        "Generate ready-to-post content from your current data. "
+        "All posts use aggregate numbers only — no learner names."
+    )
+
+    if not sm:
+        st.info("Upload assessment data first to generate posts.")
+        return
+
+    o = sm["overall"]
+    period = st.text_input("Period label for posts", placeholder="e.g. this quarter, Q3 2025", key="social_period")
+    period_str = period if period else "this quarter"
+
+    # Identify best-performing topic
+    by_topic = sm.get("by_topic", {})
+    best_topic = max(by_topic.items(), key=lambda x: x[1]["mean_gain"])[0] if by_topic else "digital literacy"
+    worst_topic = max(by_topic.items(), key=lambda x: x[1]["pct_below_85"])[0] if by_topic else None
+
+    n       = o["n_people"]
+    gain    = o["mean_gain"]
+    pct_85  = o["pct_reaching_85"]
+    n_85    = o["n_reaching_85"]
+    pct_imp = o["pct_improved"]
+
+    posts = {
+        "Instagram — Community & Celebration": (
+            f"Digital literacy is life-changing — and now we can prove it.\n\n"
+            f"{period_str.capitalize()}, {pct_85}% of our learners reached the {benchmark}% proficiency benchmark. "
+            f"That's {n_85} real people who can now navigate the web, fill out job applications online, "
+            f"and communicate with confidence.\n\n"
+            f"We're proud of every one of them. #DigitalLiteracy #MissionIgnite #BuffaloStrong"
+        ),
+        "LinkedIn — Professional & Funder-Facing": (
+            f"At Mission: Ignite, we believe every number has a person behind it.\n\n"
+            f"{period_str.capitalize()}: {n} learners completed pre- and post-assessments in our digital literacy program. "
+            f"Average skill-score gain: +{gain} points on a 100-point scale. "
+            f"{pct_85}% reached the {benchmark}% proficiency benchmark.\n\n"
+            f"These aren't just metrics — they're neighbors who are now better equipped for today's economy. "
+            f"Proud to share this with our partners and supporters."
+        ),
+        "Facebook — Recruitment": (
+            f"Know someone who wants to build their computer skills?\n\n"
+            f"Our free digital literacy program is open to everyone. "
+            f"{period_str.capitalize()}, {pct_imp}% of learners who completed the program showed measurable improvement. "
+            f"Topics include {best_topic.lower()} and more — everything from basic internet use to job applications.\n\n"
+            f"Sessions are free. No experience needed. Reach out to get started."
+        ),
+        "Twitter / X — Data-Forward": (
+            f"Mission: Ignite results — {period_str}:\n"
+            f"+{gain} pts average skill gain\n"
+            f"{pct_85}% reached the {benchmark}% benchmark\n"
+            f"{n} learners. Real results.\n\n"
+            f"#DigitalEquity #WorkforceDevelopment #BuffaloNY"
+        ),
+        "Email Subject Lines (A/B options)": (
+            f"Option A: {n_85} people reached digital proficiency {period_str} — here's the data\n\n"
+            f"Option B: +{gain} points. {pct_85}% proficient. {period_str.capitalize()}'s results are in.\n\n"
+            f"Option C: Our learners proved it {period_str}: digital skills change lives"
+        ),
+    }
+
+    platform = st.selectbox("Platform", list(posts.keys()))
+    post_text = posts[platform]
+
+    st.markdown("**Generated post:**")
+    st.text_area("Copy and paste this post", value=post_text, height=220, key="post_output")
+
+    col1, col2 = st.columns(2)
+    col1.download_button(
+        "Download as text file",
+        data=post_text.encode(),
+        file_name=f"mission_ignite_{platform.split('—')[0].strip().lower().replace(' ','_')}_post.txt",
+        mime="text/plain",
+        use_container_width=True,
+    )
+
+    with col2:
+        all_posts = "\n\n" + "="*60 + "\n\n".join(
+            f"{p}\n\n{t}" for p, t in posts.items()
+        )
+        st.download_button(
+            "Download all platforms",
+            data=all_posts.encode(),
+            file_name="mission_ignite_all_social_posts.txt",
+            mime="text/plain",
+            use_container_width=True,
+        )
+
+    st.divider()
+    st.markdown("**Privacy reminder**")
+    st.info(
+        "These posts use aggregate numbers only. Before featuring any individual's story or photo, "
+        "collect written consent specifying the platform, content, and duration. "
+        "See the Program Documentation for the full consent process."
+    )
+
+
 # ─── qualitative section ──────────────────────────────────────────────────────
 
 def section_qualitative():
@@ -1078,17 +1179,18 @@ def main():
         "Centers & Sites",
         "Improvement Focus",
         "Reports",
+        "Social Media",
         "Qualitative",
         "How to use",
     ])
 
-    # How to use and Qualitative are always available
-    with tabs[5]: section_qualitative()
-    with tabs[6]: section_how_to_use()
+    # Always-available tabs
+    with tabs[6]: section_qualitative()
+    with tabs[7]: section_how_to_use()
 
     # ── no file — show placeholders in data tabs ──────────────────────────────
     if not csv_file:
-        for i in range(5):
+        for i in range(6):
             with tabs[i]:
                 st.info("Upload a Northstar CSV export in the sidebar to get started.")
                 if i == 0:
@@ -1168,6 +1270,7 @@ def main():
     with tabs[2]: section_centers(cl, sm, benchmark)
     with tabs[3]: section_weak(wp, benchmark)
     with tabs[4]: section_reports(pairs_filtered, sm, audit, wp, cl, benchmark, period)
+    with tabs[5]: section_social(sm, audit, benchmark)
 
 
 if __name__ == "__main__":
