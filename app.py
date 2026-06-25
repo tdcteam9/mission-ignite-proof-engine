@@ -825,6 +825,198 @@ def section_reports(pairs, sm, audit, wp, cl, benchmark, period):
                        "audit.json", "application/json", use_container_width=True)
 
 
+# ─── qualitative section ──────────────────────────────────────────────────────
+
+def section_qualitative():
+    st.markdown("### Participant Feedback & Survey Data")
+    st.caption(
+        "Upload a survey or feedback CSV to analyze participant responses alongside "
+        "the assessment data. Numeric columns are charted as distributions; "
+        "text columns are summarized by word frequency."
+    )
+
+    qual_file = st.file_uploader(
+        "Upload feedback / survey CSV",
+        type=["csv"],
+        help="Any CSV with a header row. Numeric columns (ratings, scores) and text columns (open responses) are handled automatically.",
+        key="qual_uploader",
+    )
+
+    if not qual_file:
+        st.info("Upload your survey or feedback CSV above to get started.")
+        return
+
+    try:
+        qdf = pd.read_csv(qual_file)
+    except Exception as e:
+        st.error(f"Could not read file: {e}")
+        return
+
+    st.success(f"{len(qdf):,} responses loaded across {len(qdf.columns)} columns.")
+
+    num_cols  = qdf.select_dtypes(include="number").columns.tolist()
+    text_cols = [c for c in qdf.columns if c not in num_cols]
+
+    # ── numeric columns ───────────────────────────────────────────────────────
+    if num_cols:
+        st.markdown("#### Numeric responses")
+        summary_rows = []
+        for col in num_cols:
+            s = qdf[col].dropna()
+            if len(s) == 0: continue
+            summary_rows.append({
+                "Question / field": col,
+                "Responses":        int(len(s)),
+                "Mean":             round(s.mean(), 2),
+                "Median":           round(s.median(), 2),
+                "Min":              round(s.min(), 2),
+                "Max":              round(s.max(), 2),
+            })
+        if summary_rows:
+            st.dataframe(pd.DataFrame(summary_rows), use_container_width=True, hide_index=True)
+
+        # Bar chart of means if 2+ numeric cols
+        if len(summary_rows) >= 2:
+            means_df = pd.DataFrame(summary_rows)
+            fig = px.bar(
+                means_df, x="Question / field", y="Mean",
+                title="Mean score by question",
+                color_discrete_sequence=["#1A3A5C"],
+                text="Mean",
+            )
+            fig.update_traces(textposition="outside")
+            fig.update_layout(margin=dict(t=40, b=0), showlegend=False)
+            st.plotly_chart(fig, use_container_width=True)
+
+    # ── text columns ──────────────────────────────────────────────────────────
+    if text_cols:
+        st.markdown("#### Open-ended responses")
+        STOPWORDS = {
+            "the","a","an","and","or","but","in","on","at","to","for","of","with",
+            "is","was","it","i","my","we","our","they","this","that","are","be",
+            "have","had","has","not","so","very","just","do","did","also","would",
+            "could","should","been","were","me","he","she","his","her","its","if",
+            "as","by","from","into","than","more","no","up","out","when","what",
+            "there","their","them","which","will","can","about","your","you","all",
+        }
+        col_pick = st.selectbox("Select a text column to explore", text_cols)
+        responses = qdf[col_pick].dropna().astype(str)
+        responses = responses[responses.str.strip() != ""]
+
+        st.caption(f"{len(responses):,} responses in this column.")
+
+        # Word frequency
+        words = {}
+        for r in responses:
+            for w in re.findall(r"[a-z']+", r.lower()):
+                if w not in STOPWORDS and len(w) > 2:
+                    words[w] = words.get(w, 0) + 1
+        top_words = sorted(words.items(), key=lambda x: -x[1])[:20]
+
+        if top_words:
+            wdf = pd.DataFrame(top_words, columns=["Word", "Count"])
+            fig2 = px.bar(
+                wdf, x="Count", y="Word", orientation="h",
+                title=f"Top 20 words — {col_pick}",
+                color_discrete_sequence=["#E85D26"],
+            )
+            fig2.update_layout(yaxis=dict(autorange="reversed"), margin=dict(t=40, b=0))
+            st.plotly_chart(fig2, use_container_width=True)
+
+        with st.expander("View raw responses"):
+            st.dataframe(responses.reset_index(drop=True).rename("Response"),
+                         use_container_width=True)
+
+
+# ─── how to use section ────────────────────────────────────────────────────────
+
+def section_how_to_use():
+    st.markdown("### What this tool does")
+    st.markdown(
+        "This tool takes raw assessment exports from the "
+        "[Northstar Digital Literacy platform](https://www.digitalliteracyassessment.org/) "
+        "and turns them into defensible, headcount-backed proof-of-learning reports — "
+        "with no manual spreadsheet work."
+    )
+
+    st.divider()
+
+    st.markdown("### Step-by-step")
+
+    st.markdown("**Step 1 — Export your data from Northstar**")
+    st.markdown(
+        "Log into your Northstar admin account. Go to **Reports → Export** and download "
+        "the full assessment results as a CSV. No special settings needed — the raw export works as-is."
+    )
+
+    st.markdown("**Step 2 — Upload the CSV**")
+    st.markdown(
+        "Use the **Current period CSV** uploader in the left sidebar. "
+        "The file is processed entirely in your browser session — it is never stored. "
+        "You will see a green confirmation banner once the data loads."
+    )
+
+    st.markdown("**Step 3 — Review your results**")
+    st.markdown(
+        "Use the tabs across the top to explore your data:\n\n"
+        "- **Overview** — headline metrics and charts for the whole program\n"
+        "- **By Topic** — breakdown per Northstar skill area\n"
+        "- **Centers & Sites** — per-location leaderboard\n"
+        "- **Improvement Focus** — topics where learners are still struggling\n"
+        "- **Qualitative** — upload a separate feedback or survey CSV\n"
+        "- **Reports** — download PDFs and raw data"
+    )
+
+    st.markdown("**Step 4 — Download reports**")
+    st.markdown(
+        "Go to the **Reports** tab. Click **Download Funder Report PDF** for a "
+        "one-page external-facing summary, or **Download Executive Summary PDF** for full "
+        "internal detail. You can also download individual site PDFs as a ZIP."
+    )
+
+    st.divider()
+
+    st.markdown("### Optional features")
+    st.markdown(
+        "**Quarter-over-quarter comparison** — upload a second CSV (previous period) "
+        "in the sidebar to see delta arrows on every metric.\n\n"
+        "**Custom benchmark** — the proficiency threshold defaults to 85% (Northstar standard). "
+        "You can adjust it in the **Filters & settings** expander after uploading data.\n\n"
+        "**Date range filter** — narrow results to a specific window using the date picker "
+        "that appears in the sidebar after upload."
+    )
+
+    st.divider()
+
+    st.markdown("### Data privacy")
+    st.markdown(
+        "No learner names appear in any generated report. "
+        "Learners are matched by a normalized version of their name used only internally "
+        "to pair pre- and post-assessments — this key never leaves the calculation and "
+        "is never included in any download."
+    )
+
+    st.divider()
+
+    st.markdown("### Understanding the numbers")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Mean gain** — the average improvement in score (0–100 scale) "
+                    "from pre-assessment to post-assessment across all matched learners.")
+        st.markdown("**% improved** — share of matched learners whose post score was "
+                    "higher than their pre score, regardless of whether they hit the benchmark.")
+        st.markdown("**% reached benchmark** — share of matched learners whose final "
+                    "post score was at or above the proficiency threshold (default 85%).")
+    with col2:
+        st.markdown("**Matched pair** — one learner who took both a pre- and a "
+                    "post-assessment for the same topic. Learners with only one record "
+                    "are excluded and counted in the audit.")
+        st.markdown("**Center vs. site** — a 'center' is any location with at least "
+                    f"{MIN_N_CENTER} matched learners. Smaller locations appear in the "
+                    "All Sites table but are excluded from the leaderboard to avoid "
+                    "misleading stats from tiny sample sizes.")
+
+
 # ─── main ──────────────────────────────────────────────────────────────────────
 
 def main():
@@ -879,14 +1071,32 @@ def main():
             "No learner names appear in any report."
         )
 
-    # ── no file ───────────────────────────────────────────────────────────────
+    # ── tabs (always visible) ─────────────────────────────────────────────────
+    tabs = st.tabs([
+        "Overview",
+        "By Topic",
+        "Centers & Sites",
+        "Improvement Focus",
+        "Reports",
+        "Qualitative",
+        "How to use",
+    ])
+
+    # How to use and Qualitative are always available
+    with tabs[5]: section_qualitative()
+    with tabs[6]: section_how_to_use()
+
+    # ── no file — show placeholders in data tabs ──────────────────────────────
     if not csv_file:
-        st.info("Upload a Northstar CSV export in the sidebar to get started.")
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("People matched", "—")
-        c2.metric("Mean gain", "—")
-        c3.metric("Improved", "—")
-        c4.metric(f"Reached {benchmark}%", "—")
+        for i in range(5):
+            with tabs[i]:
+                st.info("Upload a Northstar CSV export in the sidebar to get started.")
+                if i == 0:
+                    c1, c2, c3, c4 = st.columns(4)
+                    c1.metric("People matched", "—")
+                    c2.metric("Mean gain", "—")
+                    c3.metric("Improved", "—")
+                    c4.metric(f"Reached {benchmark}%", "—")
         return
 
     # ── load current period ───────────────────────────────────────────────────
@@ -910,9 +1120,8 @@ def main():
         max_date = valid_dates.dt.date.max()
         with st.sidebar:
             with st.expander("Filters & settings", expanded=False):
-                pass  # already rendered benchmark above; date goes in same expander via session state trick
+                pass  # already rendered benchmark above
 
-        # Render date filter directly in sidebar (outside the expander to avoid duplicate key)
         with st.sidebar:
             dr = st.date_input(
                 "Date range",
@@ -953,14 +1162,7 @@ def main():
         icon=None,
     )
 
-    # ── tabs ──────────────────────────────────────────────────────────────────
-    tabs = st.tabs([
-        "Overview",
-        "By Topic",
-        "Centers & Sites",
-        "Improvement Focus",
-        "Reports",
-    ])
+    # ── data tabs ─────────────────────────────────────────────────────────────
     with tabs[0]: section_overview(sm, audit, benchmark, prev_sm, prev_audit)
     with tabs[1]: section_topics(sm, benchmark)
     with tabs[2]: section_centers(cl, sm, benchmark)
