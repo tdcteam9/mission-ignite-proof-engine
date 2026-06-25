@@ -20,11 +20,7 @@ import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
 
-try:
-    from weasyprint import HTML as WPhtml
-    HAVE_PDF = True
-except Exception:
-    HAVE_PDF = False
+HAVE_PDF = None  # lazily determined on first PDF render
 
 # ─── constants ────────────────────────────────────────────────────────────────
 DEFAULT_BENCHMARK = 85
@@ -523,10 +519,22 @@ def build_site_pdf_html(site_name, pairs, network_o, benchmark, period=""):
 </div></body></html>"""
 
 
+def _weasyprint_available():
+    """Lazily check for weasyprint — avoids font-scan hang on startup."""
+    global HAVE_PDF
+    if HAVE_PDF is None:
+        try:
+            from weasyprint import HTML  # noqa: F401
+            HAVE_PDF = True
+        except Exception:
+            HAVE_PDF = False
+    return HAVE_PDF
+
 def render_pdf(html_str):
-    if not HAVE_PDF or not html_str:
+    if not _weasyprint_available() or not html_str:
         return None
     try:
+        from weasyprint import HTML as WPhtml
         return WPhtml(string=html_str).write_pdf()
     except Exception:
         return None
@@ -696,7 +704,9 @@ def section_reports(pairs, sm, audit, wp, cl, benchmark, period):
     st.markdown("### Generate Reports")
 
     # ── PDF report buttons ────────────────────────────────────────────────────
-    if not HAVE_PDF:
+    pdf_ok = _weasyprint_available()
+
+    if not pdf_ok:
         st.warning(
             "PDF generation requires **weasyprint**. "
             "Add `weasyprint` to `requirements.txt` and "
@@ -709,7 +719,7 @@ def section_reports(pairs, sm, audit, wp, cl, benchmark, period):
     with col1:
         st.markdown("**Funder Report**")
         st.caption(f"One-pager with headline stats, topic results, and improvement focus. Benchmark: {benchmark}%.")
-        if HAVE_PDF:
+        if pdf_ok:
             pdf = render_pdf(build_funder_pdf_html(sm, audit, wp, benchmark, period))
             if pdf:
                 st.download_button("Download Funder Report PDF", data=pdf,
@@ -719,7 +729,7 @@ def section_reports(pairs, sm, audit, wp, cl, benchmark, period):
     with col2:
         st.markdown("**Executive Summary**")
         st.caption("Full internal detail: all topics, center leaderboard, gain distribution.")
-        if HAVE_PDF:
+        if pdf_ok:
             pdf2 = render_pdf(build_exec_pdf_html(sm, audit, wp, cl, benchmark, period))
             if pdf2:
                 st.download_button("Download Executive Summary PDF", data=pdf2,
@@ -735,7 +745,7 @@ def section_reports(pairs, sm, audit, wp, cl, benchmark, period):
         f"{len(eligible_sites)} sites qualify (≥{MIN_N_SITE_PDF} learners). "
         "Each PDF shows that site's stats with a comparison to the network average."
     )
-    if HAVE_PDF and eligible_sites:
+    if pdf_ok and eligible_sites:
         if st.button("Generate all site PDFs", use_container_width=True):
             with st.spinner(f"Generating {len(eligible_sites)} site reports…"):
                 zip_bytes, count = build_site_zip(pairs, sm, benchmark, period)
@@ -748,7 +758,7 @@ def section_reports(pairs, sm, audit, wp, cl, benchmark, period):
                     type="primary",
                     use_container_width=True,
                 )
-    elif not HAVE_PDF:
+    elif not pdf_ok:
         pass  # warning already shown above
     else:
         st.info("No sites have enough learners for individual reports yet.")
