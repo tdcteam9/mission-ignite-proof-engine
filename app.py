@@ -567,6 +567,39 @@ def build_site_zip(pairs, sm, benchmark, period=""):
 
 # ─── UI sections ──────────────────────────────────────────────────────────────
 
+def _build_overview_summary(sm, audit, benchmark, period=""):
+    o       = sm["overall"]
+    n       = audit["distinct_people"]
+    n_sites = len([s for s, v in sm.get("by_site", {}).items() if v["n_people"] >= 1])
+    gain    = o["mean_gain"]
+    pct_85  = o["pct_reaching_85"]
+    pct_imp = o["pct_improved"]
+
+    period_str = f"In {period}, " if period else "This period, "
+    parts = [
+        f"{period_str}{n:,} learners completed pre- and post-assessments across "
+        f"{n_sites} site{'s' if n_sites != 1 else ''}."
+    ]
+
+    parts.append(
+        f"The average skill gain was +{gain} points, "
+        f"with {pct_imp}% of learners showing improvement "
+        f"and {pct_85}% reaching the {benchmark}% proficiency benchmark."
+    )
+
+    by_topic = sm.get("by_topic", {})
+    if by_topic:
+        best  = max(by_topic.items(), key=lambda x: x[1]["pct_reaching_85"])
+        worst = min(by_topic.items(), key=lambda x: x[1]["pct_reaching_85"])
+        if best[0] != worst[0]:
+            parts.append(
+                f"{best[0]} showed the strongest results ({best[1]['pct_reaching_85']}% reaching benchmark). "
+                f"{worst[0]} has the most room for improvement ({worst[1]['pct_reaching_85']}% reaching benchmark)."
+            )
+
+    return " ".join(parts)
+
+
 def section_overview(sm, audit, benchmark, prev_sm=None, prev_audit=None):
     o = sm["overall"]
 
@@ -595,8 +628,11 @@ def section_overview(sm, audit, benchmark, prev_sm=None, prev_audit=None):
     c4.metric(f"Reached {benchmark}%", f"{o['pct_reaching_85']}%",
               _delta("pct_reaching_85", "pct") or f"{o['n_reaching_85']:,} people")
 
+    # ── AI summary ────────────────────────────────────────────────────────────
+    st.info(_build_overview_summary(sm, audit, benchmark))
+
     if prev_sm:
-        st.info(
+        st.caption(
             f"Deltas shown vs previous period "
             f"({prev_audit['distinct_people']:,} people, "
             f"+{prev_sm['overall']['mean_gain']} pts avg gain)"
@@ -1252,10 +1288,8 @@ def section_how_to_use():
     st.markdown(
         "**Quarter-over-quarter comparison** — upload a second CSV (previous period) "
         "in the sidebar to see delta arrows on every metric.\n\n"
-        "**Custom benchmark** — the proficiency threshold defaults to 85% (Northstar standard). "
-        "You can adjust it in the **Filters & settings** expander after uploading data.\n\n"
-        "**Date range filter** — narrow results to a specific window using the date picker "
-        "that appears in the sidebar after upload."
+        "**Participant feedback** — upload a Tech360 survey CSV in the Feedback for Trainers "
+        "upload box to see satisfaction metrics, word-frequency charts, and highlight quotes."
     )
 
     st.divider()
@@ -1316,22 +1350,7 @@ def main():
                                      help="Tech360 feedback surveys or any participant survey export.")
         st.divider()
 
-        # Filters — only show after a file is loaded
-        benchmark   = DEFAULT_BENCHMARK
-        date_range  = None
-        has_filters = False
-
-        if csv_file:
-            with st.expander("Filters & settings", expanded=False):
-                benchmark = st.slider(
-                    "Proficiency benchmark (%)", 50, 95, DEFAULT_BENCHMARK, step=5,
-                    help="The score a learner must reach to 'pass'. Northstar default is 85%."
-                )
-                st.caption(f"Currently set to **{benchmark}%**. Changing this updates all numbers instantly.")
-
-                # Date range (needs pairs to know min/max)
-                # We'll populate this after loading pairs below
-                has_filters = True
+        benchmark = DEFAULT_BENCHMARK
 
         period = st.text_input("Report period label",
                                placeholder="e.g. Q3 2025",
@@ -1341,7 +1360,7 @@ def main():
         st.markdown(
             "**How it works**\n\n"
             "1. Upload your Northstar CSV\n"
-            "2. Adjust benchmark or date range if needed\n"
+            "2. Review results across the tabs\n"
             "3. Go to **Reports** to download PDFs\n\n"
             "No learner names appear in any report."
         )
@@ -1395,34 +1414,7 @@ def main():
                    "pre- and post-assessment records with recognisable phase tags.")
         st.stop()
 
-    # ── date range filter (now we have pairs, so we know min/max) ────────────
-    valid_dates = pairs["pre_date"].dropna()
-    date_start, date_end = None, None
-
-    if has_filters and len(valid_dates) > 0:
-        min_date = valid_dates.dt.date.min()
-        max_date = valid_dates.dt.date.max()
-        with st.sidebar:
-            with st.expander("Filters & settings", expanded=False):
-                pass  # already rendered benchmark above
-
-        with st.sidebar:
-            dr = st.date_input(
-                "Date range",
-                value=(min_date, max_date),
-                min_value=min_date,
-                max_value=max_date,
-                help="Filter to assessments that started within this window.",
-                key="date_range_filter",
-            )
-            if isinstance(dr, (list, tuple)) and len(dr) == 2:
-                date_start, date_end = dr[0], dr[1]
-
-    # Apply date filter
-    pairs_filtered = filter_pairs(pairs, date_start, date_end)
-    if len(pairs_filtered) == 0:
-        st.warning("No pairs found in the selected date range. Try widening the filter.")
-        st.stop()
+    pairs_filtered = pairs
 
     # ── compute stats ─────────────────────────────────────────────────────────
     sm, wp, cl, audit = run_stats(pairs_filtered, trainer_sites, benchmark, base_audit)
