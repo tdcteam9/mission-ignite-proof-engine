@@ -1035,11 +1035,8 @@ def _section_qual_tech360(qdf):
     improve  = clean_responses("What could your Trainer(s) improve for future classes?")
     comments = clean_responses("Additional comments from the participant should be included here.")
 
-    st.markdown("#### What participants said trainers did well")
+    st.markdown("#### What participants said")
     if len(did_well):
-        st.caption(f"{len(did_well):,} responses with content.")
-        _word_freq_chart(did_well, "Top words — trainer strengths", "#1A3A5C")
-        # highlight quotes: responses longer than 60 chars
         highlights = did_well[did_well.str.len() > 60].sample(
             min(4, (did_well.str.len() > 60).sum()), random_state=1
         )
@@ -1065,29 +1062,11 @@ def _section_qual_tech360(qdf):
             st.dataframe(comments.reset_index(drop=True).rename("Comment"), use_container_width=True)
 
 
-def section_qualitative():
+def section_qualitative(qdf=None):
     st.markdown("### Participant Feedback & Survey Data")
-    st.caption(
-        "Upload a participant feedback or survey CSV. "
-        "Mission: Ignite Tech360 survey exports are recognized automatically and displayed as a full satisfaction dashboard. "
-        "Any other CSV is analyzed by column type."
-    )
 
-    qual_file = st.file_uploader(
-        "Upload feedback / survey CSV",
-        type=["csv"],
-        help="Any CSV with a header row. Numeric columns and text columns are handled automatically.",
-        key="qual_uploader",
-    )
-
-    if not qual_file:
-        st.info("Upload your survey or feedback CSV above to get started.")
-        return
-
-    try:
-        qdf = pd.read_csv(qual_file)
-    except Exception as e:
-        st.error(f"Could not read file: {e}")
+    if qdf is None:
+        st.info("Upload a participant survey CSV in the sidebar to get started.")
         return
 
     st.success(f"{len(qdf):,} responses loaded.")
@@ -1249,6 +1228,9 @@ def main():
         prev_file = st.file_uploader("Previous period CSV (optional)",
                                      type=["csv"],
                                      help="Upload last quarter's export to see quarter-over-quarter deltas.")
+        qual_file = st.file_uploader("Participant survey CSV (optional)",
+                                     type=["csv"],
+                                     help="Tech360 feedback surveys or any participant survey export.")
         st.divider()
 
         # Filters — only show after a file is loaded
@@ -1293,8 +1275,16 @@ def main():
         "How to use",
     ])
 
+    # ── parse qualitative CSV if uploaded ────────────────────────────────────
+    qdf = None
+    if qual_file:
+        try:
+            qdf = pd.read_csv(qual_file)
+        except Exception:
+            st.sidebar.warning("Could not read survey file.")
+
     # Always-available tabs
-    with tabs[6]: section_qualitative()
+    with tabs[6]: section_qualitative(qdf)
     with tabs[7]: section_how_to_use()
 
     # ── no file — show placeholders in data tabs ──────────────────────────────
