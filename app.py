@@ -928,18 +928,155 @@ def section_social(sm, audit, benchmark):
 
 # ─── qualitative section ──────────────────────────────────────────────────────
 
+_QUAL_STOPWORDS = {
+    "the","a","an","and","or","but","in","on","at","to","for","of","with",
+    "is","was","it","i","my","we","our","they","this","that","are","be",
+    "have","had","has","not","so","very","just","do","did","also","would",
+    "could","should","been","were","me","he","she","his","her","its","if",
+    "as","by","from","into","than","more","no","up","out","when","what",
+    "there","their","them","which","will","can","about","your","you","all",
+    "good","great","well","class","trainer","trainers","everything","nothing",
+    "think","know","need","done","make","keep","same","done","always","work",
+}
+
+_TECH360_INDICATORS = {
+    "I feel more confident about the topics I just learned about.",
+    "I will use the skills I learned in this class.",
+    "My Trainer(s) was/were prepared for class.",
+    "My Trainer(s) listened to my needs.",
+}
+
+def _find_col(df, *candidates):
+    """Return the first DataFrame column that matches any candidate (ignoring leading/trailing spaces)."""
+    stripped_map = {c.strip(): c for c in df.columns}
+    for cand in candidates:
+        if cand.strip() in stripped_map:
+            return stripped_map[cand.strip()]
+    return None
+
+def _word_freq_chart(responses, title, color="#E85D26", n=15):
+    words = {}
+    for r in responses:
+        for w in re.findall(r"[a-z']+", r.lower()):
+            if w not in _QUAL_STOPWORDS and len(w) > 2:
+                words[w] = words.get(w, 0) + 1
+    top = sorted(words.items(), key=lambda x: -x[1])[:n]
+    if not top:
+        return
+    wdf = pd.DataFrame(top, columns=["Word", "Count"])
+    fig = px.bar(wdf, x="Count", y="Word", orientation="h",
+                 title=title, color_discrete_sequence=[color])
+    fig.update_layout(yaxis=dict(autorange="reversed"), margin=dict(t=36, b=0))
+    st.plotly_chart(fig, use_container_width=True)
+
+def _section_qual_tech360(qdf):
+    """Specialised display for the Tech360 participant feedback survey format."""
+    total = len(qdf)
+
+    # ── satisfaction headline metrics ─────────────────────────────────────────
+    st.markdown("#### Participant Satisfaction")
+
+    def pct_val(col_key, target):
+        col = _find_col(qdf, col_key)
+        if col is None: return None
+        vals = qdf[col].dropna().astype(str).str.strip().str.lower()
+        return round(100 * (vals == target.lower()).sum() / len(vals)) if len(vals) else None
+
+    metrics = [
+        ("Felt more confident",      "I feel more confident about the topics I just learned about.", "yes"),
+        ("Will use skills learned",  "I will use the skills I learned in this class.",               "yes"),
+        ("Trainer always prepared",  "My Trainer(s) was/were prepared for class.",                   "always"),
+        ("Trainer always listening", "My Trainer(s) listened to my needs.",                          "always"),
+    ]
+    cols = st.columns(len(metrics))
+    for col_ui, (label, col_key, target) in zip(cols, metrics):
+        val = pct_val(col_key, target)
+        col_ui.metric(label, f"{val}%" if val is not None else "—")
+    st.caption(f"Based on {total:,} survey responses.")
+    st.divider()
+
+    # ── breakdown charts ──────────────────────────────────────────────────────
+    prog_col = _find_col(qdf, "What class was provided?", "What class was provided? ")
+    loc_col  = _find_col(qdf, "Location", "Location ")
+
+    col_left, col_right = st.columns(2)
+
+    if prog_col:
+        counts = qdf[prog_col].str.strip().value_counts().reset_index()
+        counts.columns = ["Program", "Responses"]
+        fig = px.bar(counts, x="Responses", y="Program", orientation="h",
+                     title="Responses by program", color_discrete_sequence=["#1A3A5C"])
+        fig.update_layout(yaxis=dict(autorange="reversed"), margin=dict(t=36, b=0))
+        col_left.plotly_chart(fig, use_container_width=True)
+
+    if loc_col:
+        counts = qdf[loc_col].str.strip().value_counts().reset_index()
+        counts.columns = ["Location", "Responses"]
+        fig = px.bar(counts, x="Responses", y="Location", orientation="h",
+                     title="Responses by location", color_discrete_sequence=["#E85D26"])
+        fig.update_layout(yaxis=dict(autorange="reversed"), margin=dict(t=36, b=0))
+        col_right.plotly_chart(fig, use_container_width=True)
+
+    st.divider()
+
+    # ── open-ended word frequency ─────────────────────────────────────────────
+    blank_like = {"", "n/a", "na", "nothing", "none", "no", "nothing.", "n.a.",
+                  "everything was good", "everything was good.", "everything good",
+                  "perfect", "nothing.", "great", "good"}
+
+    def clean_responses(col_key):
+        col = _find_col(qdf, col_key)
+        if col is None: return pd.Series([], dtype=str)
+        r = qdf[col].dropna().astype(str)
+        return r[r.str.strip().str.lower().apply(lambda x: x not in blank_like) &
+                 (r.str.strip() != "")]
+
+    did_well = clean_responses("What did your Trainer(s) do well during the class?")
+    improve  = clean_responses("What could your Trainer(s) improve for future classes?")
+    comments = clean_responses("Additional comments from the participant should be included here.")
+
+    st.markdown("#### What participants said trainers did well")
+    if len(did_well):
+        st.caption(f"{len(did_well):,} responses with content.")
+        _word_freq_chart(did_well, "Top words — trainer strengths", "#1A3A5C")
+        # highlight quotes: responses longer than 60 chars
+        highlights = did_well[did_well.str.len() > 60].sample(
+            min(4, (did_well.str.len() > 60).sum()), random_state=1
+        )
+        if len(highlights):
+            for q in highlights:
+                st.info(f'"{q.strip()}"')
+        with st.expander("View all responses"):
+            st.dataframe(did_well.reset_index(drop=True).rename("Response"), use_container_width=True)
+
+    st.markdown("#### What participants suggested for improvement")
+    if len(improve):
+        st.caption(f"{len(improve):,} responses with content.")
+        _word_freq_chart(improve, "Top words — improvement suggestions", "#E85D26")
+        with st.expander("View all responses"):
+            st.dataframe(improve.reset_index(drop=True).rename("Response"), use_container_width=True)
+    else:
+        st.caption("Most participants indicated no improvements needed.")
+
+    if len(comments):
+        st.markdown("#### Additional participant comments")
+        st.caption(f"{len(comments):,} additional comments.")
+        with st.expander("View comments"):
+            st.dataframe(comments.reset_index(drop=True).rename("Comment"), use_container_width=True)
+
+
 def section_qualitative():
     st.markdown("### Participant Feedback & Survey Data")
     st.caption(
-        "Upload a survey or feedback CSV to analyze participant responses alongside "
-        "the assessment data. Numeric columns are charted as distributions; "
-        "text columns are summarized by word frequency."
+        "Upload a participant feedback or survey CSV. "
+        "Mission: Ignite Tech360 survey exports are recognized automatically and displayed as a full satisfaction dashboard. "
+        "Any other CSV is analyzed by column type."
     )
 
     qual_file = st.file_uploader(
         "Upload feedback / survey CSV",
         type=["csv"],
-        help="Any CSV with a header row. Numeric columns (ratings, scores) and text columns (open responses) are handled automatically.",
+        help="Any CSV with a header row. Numeric columns and text columns are handled automatically.",
         key="qual_uploader",
     )
 
@@ -953,12 +1090,18 @@ def section_qualitative():
         st.error(f"Could not read file: {e}")
         return
 
-    st.success(f"{len(qdf):,} responses loaded across {len(qdf.columns)} columns.")
+    st.success(f"{len(qdf):,} responses loaded.")
 
+    # detect Tech360 survey format
+    stripped_cols = {c.strip() for c in qdf.columns}
+    if len(_TECH360_INDICATORS & stripped_cols) >= 3:
+        _section_qual_tech360(qdf)
+        return
+
+    # ── generic fallback ──────────────────────────────────────────────────────
     num_cols  = qdf.select_dtypes(include="number").columns.tolist()
     text_cols = [c for c in qdf.columns if c not in num_cols]
 
-    # ── numeric columns ───────────────────────────────────────────────────────
     if num_cols:
         st.markdown("#### Numeric responses")
         summary_rows = []
@@ -967,66 +1110,32 @@ def section_qualitative():
             if len(s) == 0: continue
             summary_rows.append({
                 "Question / field": col,
-                "Responses":        int(len(s)),
-                "Mean":             round(s.mean(), 2),
-                "Median":           round(s.median(), 2),
-                "Min":              round(s.min(), 2),
-                "Max":              round(s.max(), 2),
+                "Responses": int(len(s)),
+                "Mean":      round(s.mean(), 2),
+                "Median":    round(s.median(), 2),
+                "Min":       round(s.min(), 2),
+                "Max":       round(s.max(), 2),
             })
         if summary_rows:
             st.dataframe(pd.DataFrame(summary_rows), use_container_width=True, hide_index=True)
-
-        # Bar chart of means if 2+ numeric cols
         if len(summary_rows) >= 2:
             means_df = pd.DataFrame(summary_rows)
-            fig = px.bar(
-                means_df, x="Question / field", y="Mean",
-                title="Mean score by question",
-                color_discrete_sequence=["#1A3A5C"],
-                text="Mean",
-            )
+            fig = px.bar(means_df, x="Question / field", y="Mean",
+                         title="Mean score by question",
+                         color_discrete_sequence=["#1A3A5C"], text="Mean")
             fig.update_traces(textposition="outside")
             fig.update_layout(margin=dict(t=40, b=0), showlegend=False)
             st.plotly_chart(fig, use_container_width=True)
 
-    # ── text columns ──────────────────────────────────────────────────────────
     if text_cols:
         st.markdown("#### Open-ended responses")
-        STOPWORDS = {
-            "the","a","an","and","or","but","in","on","at","to","for","of","with",
-            "is","was","it","i","my","we","our","they","this","that","are","be",
-            "have","had","has","not","so","very","just","do","did","also","would",
-            "could","should","been","were","me","he","she","his","her","its","if",
-            "as","by","from","into","than","more","no","up","out","when","what",
-            "there","their","them","which","will","can","about","your","you","all",
-        }
         col_pick = st.selectbox("Select a text column to explore", text_cols)
         responses = qdf[col_pick].dropna().astype(str)
         responses = responses[responses.str.strip() != ""]
-
         st.caption(f"{len(responses):,} responses in this column.")
-
-        # Word frequency
-        words = {}
-        for r in responses:
-            for w in re.findall(r"[a-z']+", r.lower()):
-                if w not in STOPWORDS and len(w) > 2:
-                    words[w] = words.get(w, 0) + 1
-        top_words = sorted(words.items(), key=lambda x: -x[1])[:20]
-
-        if top_words:
-            wdf = pd.DataFrame(top_words, columns=["Word", "Count"])
-            fig2 = px.bar(
-                wdf, x="Count", y="Word", orientation="h",
-                title=f"Top 20 words — {col_pick}",
-                color_discrete_sequence=["#E85D26"],
-            )
-            fig2.update_layout(yaxis=dict(autorange="reversed"), margin=dict(t=40, b=0))
-            st.plotly_chart(fig2, use_container_width=True)
-
+        _word_freq_chart(responses, f"Top words — {col_pick}")
         with st.expander("View raw responses"):
-            st.dataframe(responses.reset_index(drop=True).rename("Response"),
-                         use_container_width=True)
+            st.dataframe(responses.reset_index(drop=True).rename("Response"), use_container_width=True)
 
 
 # ─── how to use section ────────────────────────────────────────────────────────
