@@ -894,7 +894,7 @@ def section_social(sm, audit, benchmark):
     post_text = posts[platform]
 
     st.markdown("**Generated post:**")
-    st.text_area("Copy and paste this post", value=post_text, height=220, key="post_output")
+    st.text_area("Copy and paste this post", value=post_text, height=220, key=f"post_output_{platform}")
 
     col1, col2 = st.columns(2)
     col1.download_button(
