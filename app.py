@@ -984,20 +984,31 @@ def _build_tech360_summary(qdf, total, pct_conf, pct_use, pct_prep, pct_list, di
 
     return " ".join(parts)
 
-def _build_generic_summary(qdf, num_cols, text_col, responses):
-    parts = [f"This file contains {len(qdf):,} responses across {len(qdf.columns)} columns."]
+def _build_generic_summary(qdf):
+    total    = len(qdf)
+    num_cols = qdf.select_dtypes(include="number").columns.tolist()
+    txt_cols = [c for c in qdf.columns if c not in num_cols]
+
+    parts = [f"This file contains {total:,} responses across {len(qdf.columns)} columns."]
+
     if num_cols:
         numeric_summaries = []
         for col in num_cols[:3]:
             s = qdf[col].dropna()
             if len(s):
-                numeric_summaries.append(f"{col} (mean {s.mean():.1f})")
+                numeric_summaries.append(f"{col.strip()} (avg {s.mean():.1f})")
         if numeric_summaries:
-            parts.append(f"Numeric fields include {', '.join(numeric_summaries)}.")
-    if text_col and len(responses):
-        top = _top_words(responses)
+            parts.append(f"Numeric fields: {'; '.join(numeric_summaries)}.")
+
+    all_text = []
+    for col in txt_cols:
+        r = qdf[col].dropna().astype(str)
+        all_text.extend(r[r.str.strip() != ""].tolist())
+    if all_text:
+        top = _top_words(pd.Series(all_text))
         if top:
-            parts.append(f"The most common themes in '{text_col}' are: {', '.join(top)}.")
+            parts.append(f"The most common themes across text responses are: {', '.join(top)}.")
+
     return " ".join(parts)
 
 _TECH360_INDICATORS = {
@@ -1151,6 +1162,8 @@ def section_qualitative(qdf=None):
     num_cols  = qdf.select_dtypes(include="number").columns.tolist()
     text_cols = [c for c in qdf.columns if c not in num_cols]
 
+    st.info(_build_generic_summary(qdf))
+
     if num_cols:
         st.markdown("#### Numeric responses")
         summary_rows = []
@@ -1182,9 +1195,6 @@ def section_qualitative(qdf=None):
         responses = qdf[col_pick].dropna().astype(str)
         responses = responses[responses.str.strip() != ""]
         st.caption(f"{len(responses):,} responses in this column.")
-        # auto-generated summary
-        generic_summary = _build_generic_summary(qdf, num_cols, col_pick, responses)
-        st.info(generic_summary)
         _word_freq_chart(responses, f"Top words — {col_pick}")
         with st.expander("View raw responses"):
             st.dataframe(responses.reset_index(drop=True).rename("Response"), use_container_width=True)
