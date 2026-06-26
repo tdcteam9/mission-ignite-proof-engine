@@ -734,8 +734,47 @@ def section_weak(wp, benchmark):
     st.dataframe(df, use_container_width=True, hide_index=True)
 
 
-def section_reports(pairs, sm, audit, wp, cl, benchmark, period):
+def section_reports(pairs, sm, audit, wp, cl, benchmark, period, trainer_sites=frozenset()):
     st.markdown("### Generate Reports")
+
+    # ── customization expander ────────────────────────────────────────────────
+    all_topics = sorted(sm.get("by_topic", {}).keys())
+    all_sites  = sorted([s for s, v in sm.get("by_site", {}).items() if v["n_people"] >= 1])
+
+    with st.expander("Customize report contents", expanded=False):
+        st.caption("Filters here only affect the exported PDFs — not the tabs above.")
+        col_t, col_s = st.columns(2)
+        with col_t:
+            selected_topics = st.multiselect(
+                "Topics to include", all_topics, default=all_topics, key="pdf_topics"
+            )
+        with col_s:
+            selected_sites = st.multiselect(
+                "Sites to include", all_sites, default=all_sites, key="pdf_sites"
+            )
+        col_a, col_b = st.columns(2)
+        show_improvement = col_a.checkbox("Include improvement focus section", value=True, key="pdf_show_imp")
+        show_centers     = col_b.checkbox("Include center leaderboard", value=True, key="pdf_show_centers")
+
+    # ── build filtered pairs + recompute stats for PDFs ───────────────────────
+    pdf_pairs = pairs.copy()
+    if selected_topics:
+        pdf_pairs = pdf_pairs[pdf_pairs["topic"].isin(selected_topics)]
+    if selected_sites:
+        pdf_pairs = pdf_pairs[pdf_pairs["site"].isin(selected_sites)]
+
+    if len(pdf_pairs) == 0:
+        st.warning("No data matches your current selections — adjust the filters above.")
+        return
+
+    pdf_sm    = summarize(pdf_pairs, benchmark)
+    pdf_wp    = compute_weak_points(pdf_pairs, benchmark) if show_improvement else []
+    pdf_cl    = compute_centers(pdf_pairs, trainer_sites, benchmark) if show_centers else []
+    pdf_audit = {
+        **audit,
+        "matched_pairs":   int(len(pdf_pairs)),
+        "distinct_people": int(pdf_pairs.name_key.nunique()),
+    }
 
     # ── PDF report buttons ────────────────────────────────────────────────────
     pdf_ok = _weasyprint_available()
@@ -754,7 +793,7 @@ def section_reports(pairs, sm, audit, wp, cl, benchmark, period):
         st.markdown("**Funder Report**")
         st.caption(f"One-pager with headline stats, topic results, and improvement focus. Benchmark: {benchmark}%.")
         if pdf_ok:
-            pdf = render_pdf(build_funder_pdf_html(sm, audit, wp, benchmark, period))
+            pdf = render_pdf(build_funder_pdf_html(pdf_sm, pdf_audit, pdf_wp, benchmark, period))
             if pdf:
                 st.download_button("Download Funder Report PDF", data=pdf,
                                    file_name="Mission_Ignite_Funder_Report.pdf",
@@ -764,7 +803,7 @@ def section_reports(pairs, sm, audit, wp, cl, benchmark, period):
         st.markdown("**Executive Summary**")
         st.caption("Full internal detail: all topics, center leaderboard, gain distribution.")
         if pdf_ok:
-            pdf2 = render_pdf(build_exec_pdf_html(sm, audit, wp, cl, benchmark, period))
+            pdf2 = render_pdf(build_exec_pdf_html(pdf_sm, pdf_audit, pdf_wp, pdf_cl, benchmark, period))
             if pdf2:
                 st.download_button("Download Executive Summary PDF", data=pdf2,
                                    file_name="Mission_Ignite_Executive_Summary.pdf",
@@ -774,7 +813,7 @@ def section_reports(pairs, sm, audit, wp, cl, benchmark, period):
 
     # ── Per-site ZIP ──────────────────────────────────────────────────────────
     st.markdown("### All Site Reports (ZIP)")
-    eligible_sites = [s for s, v in sm.get("by_site", {}).items() if v["n_people"] >= MIN_N_SITE_PDF]
+    eligible_sites = [s for s, v in pdf_sm.get("by_site", {}).items() if v["n_people"] >= MIN_N_SITE_PDF]
     st.caption(
         f"{len(eligible_sites)} sites qualify (≥{MIN_N_SITE_PDF} learners). "
         "Each PDF shows that site's stats with a comparison to the network average."
@@ -782,7 +821,7 @@ def section_reports(pairs, sm, audit, wp, cl, benchmark, period):
     if pdf_ok and eligible_sites:
         if st.button("Generate all site PDFs", use_container_width=True):
             with st.spinner(f"Generating {len(eligible_sites)} site reports…"):
-                zip_bytes, count = build_site_zip(pairs, sm, benchmark, period)
+                zip_bytes, count = build_site_zip(pdf_pairs, pdf_sm, benchmark, period)
             if zip_bytes and count:
                 st.download_button(
                     f"Download {count} site reports (ZIP)",
@@ -811,13 +850,10 @@ def section_social(sm, audit, benchmark):
         return
 
     o = sm["overall"]
-    period = st.text_input("Period label for posts", placeholder="e.g. this quarter, Q3 2025", key="social_period")
-    period_str = period if period else "this quarter"
 
     # Identify best-performing topic
     by_topic = sm.get("by_topic", {})
     best_topic = max(by_topic.items(), key=lambda x: x[1]["mean_gain"])[0] if by_topic else "digital literacy"
-    worst_topic = min(by_topic.items(), key=lambda x: x[1]["pct_reaching_85"])[0] if by_topic else None
 
     n       = o["n_people"]
     gain    = o["mean_gain"]
@@ -828,14 +864,14 @@ def section_social(sm, audit, benchmark):
     posts = {
         "Instagram — Community & Celebration": (
             f"Digital literacy is life-changing — and now we can prove it.\n\n"
-            f"{period_str.capitalize()}, {pct_85}% of our learners reached the {benchmark}% proficiency benchmark. "
+            f"{pct_85}% of our learners reached the {benchmark}% proficiency benchmark. "
             f"That's {n_85} real people who can now navigate the web, fill out job applications online, "
             f"and communicate with confidence.\n\n"
             f"We're proud of every one of them. #DigitalLiteracy #MissionIgnite #BuffaloStrong"
         ),
         "LinkedIn — Professional & Funder-Facing": (
             f"At Mission: Ignite, we believe every number has a person behind it.\n\n"
-            f"{period_str.capitalize()}: {n} learners completed pre- and post-assessments in our digital literacy program. "
+            f"{n} learners completed pre- and post-assessments in our digital literacy program. "
             f"Average skill-score gain: +{gain} points on a 100-point scale. "
             f"{pct_85}% reached the {benchmark}% proficiency benchmark.\n\n"
             f"These aren't just metrics — they're neighbors who are now better equipped for today's economy. "
@@ -844,21 +880,21 @@ def section_social(sm, audit, benchmark):
         "Facebook — Recruitment": (
             f"Know someone who wants to build their computer skills?\n\n"
             f"Our free digital literacy program is open to everyone. "
-            f"{period_str.capitalize()}, {pct_imp}% of learners who completed the program showed measurable improvement. "
+            f"{pct_imp}% of learners who completed the program showed measurable improvement. "
             f"Topics include {best_topic.lower()} and more — everything from basic internet use to job applications.\n\n"
             f"Sessions are free. No experience needed. Reach out to get started."
         ),
         "Twitter / X — Data-Forward": (
-            f"Mission: Ignite results — {period_str}:\n"
+            f"Mission: Ignite results:\n"
             f"+{gain} pts average skill gain\n"
             f"{pct_85}% reached the {benchmark}% benchmark\n"
             f"{n} learners. Real results.\n\n"
             f"#DigitalEquity #WorkforceDevelopment #BuffaloNY"
         ),
         "Email Subject Lines (A/B options)": (
-            f"Option A: {n_85} people reached digital proficiency {period_str} — here's the data\n\n"
-            f"Option B: +{gain} points. {pct_85}% proficient. {period_str.capitalize()}'s results are in.\n\n"
-            f"Option C: Our learners proved it {period_str}: digital skills change lives"
+            f"Option A: {n_85} people reached digital proficiency — here's the data\n\n"
+            f"Option B: +{gain} points. {pct_85}% proficient. The results are in.\n\n"
+            f"Option C: Our learners proved it: digital skills change lives"
         ),
     }
 
@@ -1363,7 +1399,7 @@ def main():
     with tabs[1]: section_topics(sm, benchmark)
     with tabs[2]: section_centers(cl, sm, benchmark)
     with tabs[3]: section_weak(wp, benchmark)
-    with tabs[4]: section_reports(pairs_filtered, sm, audit, wp, cl, benchmark, period)
+    with tabs[4]: section_reports(pairs_filtered, sm, audit, wp, cl, benchmark, period, trainer_sites)
     with tabs[5]: section_social(sm, audit, benchmark)
 
 
