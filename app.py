@@ -5,8 +5,6 @@ Drop a Northstar CSV export → instant, defensible, headcount-backed proof-of-l
 
 Features
 --------
-* Custom proficiency benchmark (slider)
-* Date-range filter
 * Quarter-over-quarter comparison (optional second CSV)
 * Per-site PDF reports (ZIP download)
 * One-click Funder Report + Executive Summary PDFs
@@ -794,71 +792,9 @@ def section_reports(pairs, sm, audit, wp, cl, benchmark, period):
                     type="primary",
                     use_container_width=True,
                 )
-    elif not pdf_ok:
-        pass  # warning already shown above
     else:
         st.info("No sites have enough learners for individual reports yet.")
 
-    st.divider()
-
-    # ── raw data downloads ────────────────────────────────────────────────────
-    st.markdown("### Raw Data Downloads")
-    from generate_outputs import build_dashboard
-
-    summary_compat = {
-        "overall": {**sm["overall"], "gain_distribution": sm["overall"].get("gain_dist", {})},
-        "by_topic": {t: {**v, "pct_reaching_benchmark_post": v["pct_reaching_85"],
-                         "n_reaching_benchmark_post": v["n_reaching_85"]}
-                     for t, v in sm["by_topic"].items()},
-        "by_site":  {s: {**v, "pct_reaching_benchmark_post": v["pct_reaching_85"],
-                         "n_reaching_benchmark_post": v["n_reaching_85"]}
-                     for s, v in sm.get("by_site", {}).items()},
-    }
-    audit_compat = {
-        **audit,
-        "matched_pairs":               audit["matched_pairs"],
-        "distinct_people_with_a_pair": audit["distinct_people"],
-        "records_phase_unknown":       audit["unknown_phase"],
-        "ambiguous_cells_resolved_by_rule": 0,
-        "name_review_candidates": 0,
-        "confirmed_merges_applied": 0,
-        "new_pairs_from_merges": 0,
-    }
-    weak_compat = {
-        "topic_level": {
-            "by_outcome_worst_first": [{
-                "topic": r["topic"], "people": r["people"],
-                "mean_gain": r["mean_gain"],
-                "pct_below_benchmark_after_training": r["pct_below_85"],
-            } for r in wp],
-            "min_n_per_topic": 5,
-        },
-        "skill_level": {"available": False, "reason": "no items file supplied"},
-    }
-    centers_compat = {
-        "center_leaderboard": {
-            "min_n_per_center": MIN_N_CENTER,
-            "by_absolute_outcome": cl,
-            "by_value_added": sorted(cl, key=lambda r: -r["mean_gain"]),
-            "caveat": "Two lenses: gain vs. pass rate. Read both before judging a center.",
-        },
-        "trainer_pipeline": {"available": False},
-    }
-
-    ca, cb, cc = st.columns(3)
-    try:
-        dash = build_dashboard(summary_compat, audit_compat, weak_compat, centers_compat)
-        ca.download_button("Dashboard HTML", dash.encode(),
-                           "dashboard.html", "text/html", use_container_width=True)
-    except Exception as e:
-        ca.warning(f"Dashboard error: {e}")
-
-    buf = io.BytesIO()
-    pairs.to_csv(buf, index=False)
-    cb.download_button("Matched Pairs CSV", buf.getvalue(),
-                       "matched_pairs.csv", "text/csv", use_container_width=True)
-    cc.download_button("Audit JSON", json.dumps(audit_compat, indent=2).encode(),
-                       "audit.json", "application/json", use_container_width=True)
 
 
 # ─── social media generator ───────────────────────────────────────────────────
@@ -1062,20 +998,6 @@ def _find_col(df, *candidates):
             return stripped_map[cand.strip()]
     return None
 
-def _word_freq_chart(responses, title, color="#E85D26", n=15):
-    words = {}
-    for r in responses:
-        for w in re.findall(r"[a-z']+", r.lower()):
-            if w not in _QUAL_STOPWORDS and len(w) > 2:
-                words[w] = words.get(w, 0) + 1
-    top = sorted(words.items(), key=lambda x: -x[1])[:n]
-    if not top:
-        return
-    wdf = pd.DataFrame(top, columns=["Word", "Count"])
-    fig = px.bar(wdf, x="Count", y="Word", orientation="h",
-                 title=title, color_discrete_sequence=[color])
-    fig.update_layout(yaxis=dict(autorange="reversed"), margin=dict(t=36, b=0))
-    st.plotly_chart(fig, use_container_width=True)
 
 def _section_qual_tech360(qdf):
     """Specialised display for the Tech360 participant feedback survey format."""
@@ -1166,7 +1088,6 @@ def _section_qual_tech360(qdf):
     st.markdown("#### What participants suggested for improvement")
     if len(improve):
         st.caption(f"{len(improve):,} responses with content.")
-        _word_freq_chart(improve, "Top words — improvement suggestions", "#E85D26")
         with st.expander("View all responses"):
             st.dataframe(improve.reset_index(drop=True).rename("Response"), use_container_width=True)
     else:
@@ -1231,7 +1152,6 @@ def section_qualitative(qdf=None):
         responses = qdf[col_pick].dropna().astype(str)
         responses = responses[responses.str.strip() != ""]
         st.caption(f"{len(responses):,} responses in this column.")
-        _word_freq_chart(responses, f"Top words — {col_pick}")
         with st.expander("View raw responses"):
             st.dataframe(responses.reset_index(drop=True).rename("Response"), use_container_width=True)
 
@@ -1271,7 +1191,7 @@ def section_how_to_use():
         "- **By Topic** — breakdown per Northstar skill area\n"
         "- **Centers & Sites** — per-location leaderboard\n"
         "- **Improvement Focus** — topics where learners are still struggling\n"
-        "- **Qualitative** — upload a separate feedback or survey CSV\n"
+        "- **Feedback for Trainers** — upload a participant survey CSV\n"
         "- **Reports** — download PDFs and raw data"
     )
 
