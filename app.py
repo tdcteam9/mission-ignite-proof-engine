@@ -939,6 +939,67 @@ _QUAL_STOPWORDS = {
     "think","know","need","done","make","keep","same","done","always","work",
 }
 
+def _top_words(responses, n=3):
+    words = {}
+    for r in responses:
+        for w in re.findall(r"[a-z']+", r.lower()):
+            if w not in _QUAL_STOPWORDS and len(w) > 2:
+                words[w] = words.get(w, 0) + 1
+    return [w for w, _ in sorted(words.items(), key=lambda x: -x[1])[:n]]
+
+def _build_tech360_summary(qdf, total, pct_conf, pct_use, pct_prep, pct_list, did_well, improve):
+    prog_col = _find_col(qdf, "What class was provided?", "What class was provided? ")
+    loc_col  = _find_col(qdf, "Location", "Location ")
+    n_progs  = qdf[prog_col].str.strip().nunique() if prog_col else 0
+    n_locs   = qdf[loc_col].str.strip().nunique()  if loc_col  else 0
+
+    parts = [f"Across {total} survey responses"]
+    if n_progs > 1:
+        parts[0] += f" spanning {n_progs} programs"
+    if n_locs > 1:
+        parts[0] += f" at {n_locs} locations"
+    parts[0] += ", participant satisfaction was consistently high."
+
+    rates = []
+    if pct_conf is not None: rates.append(f"{pct_conf}% reported feeling more confident after class")
+    if pct_use  is not None: rates.append(f"{pct_use}% said they will use their new skills")
+    if pct_prep is not None: rates.append(f"{pct_prep}% rated their trainer as always prepared")
+    if rates:
+        sentence = ", ".join(rates[:-1])
+        if len(rates) > 1:
+            sentence += f", and {rates[-1]}"
+        else:
+            sentence = rates[0]
+        parts.append(sentence.capitalize() + ".")
+
+    strength_words = _top_words(did_well)
+    if strength_words:
+        parts.append(f"The most frequently highlighted trainer strengths were {', '.join(strength_words)}.")
+
+    imp_words = _top_words(improve)
+    if imp_words:
+        parts.append(f"Where participants suggested improvements, the most common themes were {', '.join(imp_words)}.")
+    else:
+        parts.append("The majority of participants indicated no improvements were needed.")
+
+    return " ".join(parts)
+
+def _build_generic_summary(qdf, num_cols, text_col, responses):
+    parts = [f"This file contains {len(qdf):,} responses across {len(qdf.columns)} columns."]
+    if num_cols:
+        numeric_summaries = []
+        for col in num_cols[:3]:
+            s = qdf[col].dropna()
+            if len(s):
+                numeric_summaries.append(f"{col} (mean {s.mean():.1f})")
+        if numeric_summaries:
+            parts.append(f"Numeric fields include {', '.join(numeric_summaries)}.")
+    if text_col and len(responses):
+        top = _top_words(responses)
+        if top:
+            parts.append(f"The most common themes in '{text_col}' are: {', '.join(top)}.")
+    return " ".join(parts)
+
 _TECH360_INDICATORS = {
     "I feel more confident about the topics I just learned about.",
     "I will use the skills I learned in this class.",
@@ -974,7 +1035,7 @@ def _section_qual_tech360(qdf):
     total = len(qdf)
 
     # ── satisfaction headline metrics ─────────────────────────────────────────
-    st.markdown("#### Participant Satisfaction")
+    st.markdown("#### Summary")
 
     def pct_val(col_key, target):
         col = _find_col(qdf, col_key)
@@ -988,6 +1049,11 @@ def _section_qual_tech360(qdf):
         ("Trainer always prepared",  "My Trainer(s) was/were prepared for class.",                   "always"),
         ("Trainer always listening", "My Trainer(s) listened to my needs.",                          "always"),
     ]
+    pct_conf = pct_val("I feel more confident about the topics I just learned about.", "yes")
+    pct_use  = pct_val("I will use the skills I learned in this class.", "yes")
+    pct_prep = pct_val("My Trainer(s) was/were prepared for class.", "always")
+    pct_list = pct_val("My Trainer(s) listened to my needs.", "always")
+
     cols = st.columns(len(metrics))
     for col_ui, (label, col_key, target) in zip(cols, metrics):
         val = pct_val(col_key, target)
@@ -1017,9 +1083,7 @@ def _section_qual_tech360(qdf):
         fig.update_layout(yaxis=dict(autorange="reversed"), margin=dict(t=36, b=0))
         col_right.plotly_chart(fig, use_container_width=True)
 
-    st.divider()
-
-    # ── open-ended word frequency ─────────────────────────────────────────────
+    # ── pre-compute open-ended responses (needed for summary + display) ─────────
     blank_like = {"", "n/a", "na", "nothing", "none", "no", "nothing.", "n.a.",
                   "everything was good", "everything was good.", "everything good",
                   "perfect", "nothing.", "great", "good"}
@@ -1034,6 +1098,12 @@ def _section_qual_tech360(qdf):
     did_well = clean_responses("What did your Trainer(s) do well during the class?")
     improve  = clean_responses("What could your Trainer(s) improve for future classes?")
     comments = clean_responses("Additional comments from the participant should be included here.")
+
+    # ── AI summary ────────────────────────────────────────────────────────────
+    summary_text = _build_tech360_summary(qdf, total, pct_conf, pct_use, pct_prep, pct_list, did_well, improve)
+    st.info(summary_text)
+
+    st.divider()
 
     st.markdown("#### What participants said")
     if len(did_well):
@@ -1063,7 +1133,7 @@ def _section_qual_tech360(qdf):
 
 
 def section_qualitative(qdf=None):
-    st.markdown("### Participant Feedback & Survey Data")
+    st.markdown("### Feedback for Trainers")
 
     if qdf is None:
         st.info("Upload a participant survey CSV in the sidebar to get started.")
@@ -1112,6 +1182,9 @@ def section_qualitative(qdf=None):
         responses = qdf[col_pick].dropna().astype(str)
         responses = responses[responses.str.strip() != ""]
         st.caption(f"{len(responses):,} responses in this column.")
+        # auto-generated summary
+        generic_summary = _build_generic_summary(qdf, num_cols, col_pick, responses)
+        st.info(generic_summary)
         _word_freq_chart(responses, f"Top words — {col_pick}")
         with st.expander("View raw responses"):
             st.dataframe(responses.reset_index(drop=True).rename("Response"), use_container_width=True)
@@ -1271,7 +1344,7 @@ def main():
         "Improvement Focus",
         "Reports",
         "Social Media",
-        "Qualitative",
+        "Feedback for Trainers",
         "How to use",
     ])
 
