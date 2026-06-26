@@ -1301,7 +1301,7 @@ def main():
         prev_file = st.file_uploader("Previous period CSV (optional)",
                                      type=["csv"],
                                      help="Upload last quarter's export to see quarter-over-quarter deltas.")
-        qual_file = st.file_uploader("Participant survey CSV (optional)",
+        qual_file = st.file_uploader("Feedback for Trainers CSV (optional)",
                                      type=["csv"],
                                      help="Tech360 feedback surveys or any participant survey export.")
         st.divider()
